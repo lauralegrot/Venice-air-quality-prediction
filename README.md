@@ -1,2 +1,2 @@
-# Venice-s-air-quality-prediction
+# Venice-air-quality-prediction
 Final project for Statistical Learning course at UniPD
