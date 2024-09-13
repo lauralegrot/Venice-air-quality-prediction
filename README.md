@@ -1,4 +1,4 @@
-# Venice's air quality prediction
+# Venice's air quality prediction 🌫
 ## Final project for Statistical Learning course at UniPD
 ### Project description
 Air pollution poses a significant health risk globally, contributing to approximately 400,000 deaths annually in Europe, with over 50,000 deaths in Italy due to respiratory and cardiovascular diseases. Venice, one of the most polluted cities in Italy, recorded 70 days in 2022 where the PM10 levels exceeded the European regulatory limit of 50 µg/m3, compared to the allowed 35 days. This project focuses on predicting Venice's air quality by analyzing meteorological data and identifying key weather predictors that influence particulate matter (PM10) levels.
