@@ -1,0 +1,1912 @@
+---
+title: ''
+output: pdf_document
+date: ''
+---
+
+```{r setup, include=FALSE}
+rm(list=ls())
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+\pagestyle{empty}
+
+```{=tex}
+\begin{center}
+
+\huge
+University of Padua
+
+\huge
+Departments of Mathematics
+
+\vspace{1cm}
+
+\huge
+Master's Degree in Data Science
+
+\vspace{1.5cm}
+
+\includegraphics[width=2in]{logo_unipd_small.png}
+
+\vspace{1cm}
+
+\Huge
+Venice's Air Quality Prediction
+
+\vspace{1.5cm}
+
+\begin{flushright}
+            {\Large \textit{Laura Legrottaglie}}\\
+            {\Large ID: 2073222}\\[0.5cm]
+        \end{flushright}
+
+\vspace{1.5cm}
+
+\huge
+Academic Year 2022/2023
+
+\end{center}
+```
+\newpage
+
+```{=tex}
+\pagestyle{plain}
+\setcounter{page}{1}
+```
+# Introduction 
+
+The quality of the air that we breath is a crucial aspect of everyday life. Just think that air pollution causes approximately 400000 deaths in Europe every year and over 50000 in Italy due to diseases on the respiratory and cardiovascular systems.  One of the most polluted areas in Italy is Po Valley where several cities frequently exceed the regulatory limits for fine dust particles (PM10 and PM2.5), sometimes doubling the times allowed. 
+One of these cities is Venice that in 2022 recorded 70 days with the PM10 values above $50 \, \mu g/m^{3}$ against the 35 days a year allowed by the European normative. 
+
+This project focuses on analyzing the meteorological data of the city of Venice and, based on them, trying to predict whether the next day’s air quality will be below the normative limit of ($50 \, \mu g/m^{3}$) or above it. 
+
+Predicting air quality can be beneficial in several ways. Firstly, knowing in advance the air quality might help people with health conditions and respiratory diseases to detect critical days avoiding outdoor activities and taking protective measures such as wearing masks. Secondly, the detection of particulate matter such as PM10 necessitates specialized equipment, which is not only costly to set up and maintain but also sparsely distributed. Conversely, meteorological conditions can be easily measured with affordable instrumentation providing a more accessible and cost-effective approach.
+
+The study's interpretative purpose is, thus, determining if the meteorological data can be used to predict the air quality and identifying what are the significant weather predictors. Besides these goals, the other objective is to evaluate and compare the performances of different models, focusing on their efficiency in accurately predicting air quality. 
+
+# 1 Dataset construction
+
+## 1.1 Weather datasets
+
+The dataset for this analysis has been created using weather data from the well-known meteorological site ilMeteo.it. It contains data of a four-year span, specifically the years 2018, 2019, 2021, and 2022, and focuses on the city of Venice, specifically drawing data from the *Venice Tessera* meteorological station. 
+
+```{r import, include=TRUE, results = FALSE, message=FALSE, warning=FALSE}
+# Import the libraries
+library(dplyr)
+library(ggplot2)
+library(glmnet)
+library(readxl)
+library(corrplot)
+library(knitr)
+library(pander)
+library(caret)
+library(gridExtra)
+library(igraph)
+library(glasso)
+library(correlation)
+library(ROSE)
+library(car)
+library(stats)
+library(kableExtra)
+library(MASS)
+library(e1071)
+library(pROC)
+library(devtools)
+library(dprep)
+
+```
+
+The data of each month are uploaded and then combined in a complete dataset related
+to the specific year.
+```{r weather data construction 2018}
+#Upload and combine the weather data of 2018's months
+January2018 <- read.csv("Venezia-2018-Gennaio.csv",sep=";")
+February2018 <- read.csv("Venezia-2018-Febbraio.csv",
+                         sep=";")
+March2018 <- read.csv("Venezia-2018-Marzo.csv",
+                      sep=";")
+April2018 <- read.csv("Venezia-2018-Aprile.csv",
+                      sep=";")
+May2018 <- read.csv("Venezia-2018-Maggio.csv",
+                    sep=";")
+June2018 <- read.csv("Venezia-2018-Giugno.csv",
+                     sep=";")
+July2018 <- read.csv("Venezia-2018-Luglio.csv",
+                     sep=";")
+August2018 <- read.csv("Venezia-2018-Agosto.csv",
+                       sep=";")
+September2018 <- read.csv("Venezia-2018-Settembre.csv",
+                          sep=";")
+October2018 <- read.csv("Venezia-2018-Ottobre.csv",
+                        sep=";")
+November2018 <- read.csv("Venezia-2018-Novembre.csv",
+                         sep=";")
+December2018 <- read.csv("Venezia-2018-Dicembre.csv",
+                         sep=";")
+weather2018<- rbind(January2018, February2018, March2018, April2018, May2018, 
+                    June2018, July2018, August2018, September2018, October2018,
+                    November2018, December2018)
+#This process is repeated for the years 2019,2021 and 2022
+```
+
+```{r weather data construction, include=FALSE}
+rm(list="January2018","February2018","March2018","April2018","May2018","June2018",
+   "July2018","August2018","September2018","October2018","November2018","December2018")
+
+#2019 weather
+January2019 <- read.csv("Venezia-2019-Gennaio.csv",sep=";")
+February2019 <- read.csv("Venezia-2019-Febbraio.csv",
+                         sep=";")
+March2019 <- read.csv("Venezia-2019-Marzo.csv",
+                      sep=";")
+April2019 <- read.csv("Venezia-2019-Aprile.csv",
+                      sep=";")
+May2019 <- read.csv("Venezia-2019-Maggio.csv",
+                    sep=";")
+June2019 <- read.csv("Venezia-2019-Giugno.csv",
+                     sep=";")
+July2019 <- read.csv("Venezia-2019-Luglio.csv",
+                     sep=";")
+August2019 <- read.csv("Venezia-2019-Agosto.csv",
+                       sep=";")
+September2019 <- read.csv("Venezia-2019-Settembre.csv",
+                          sep=";")
+October2019 <- read.csv("Venezia-2019-Ottobre.csv",
+                        sep=";")
+November2019 <- read.csv("Venezia-2019-Novembre.csv",
+                         sep=";")
+December2019 <- read.csv("Venezia-2019-Dicembre.csv",
+                         sep=";")
+weather2019<- rbind(January2019, February2019, March2019, April2019, May2019, 
+                    June2019, July2019, August2019, September2019, October2019,
+                    November2019, December2019)
+rm(list="January2019","March2019","April2019","May2019","June2019",
+   "July2019","August2019","September2019","October2019","November2019","December2019")
+
+
+#2021 weather
+January2021 <- read.csv("Venezia-2021-Gennaio.csv",sep=";")
+February2021 <- read.csv("Venezia-2021-Febbraio.csv",
+                         sep=";")
+March2021 <- read.csv("Venezia-2021-Marzo.csv",
+                      sep=";")
+April2021 <- read.csv("Venezia-2021-Aprile.csv",
+                      sep=";")
+May2021 <- read.csv("Venezia-2021-Maggio.csv",
+                    sep=";")
+June2021 <- read.csv("Venezia-2021-Giugno.csv",
+                     sep=";")
+July2021 <- read.csv("Venezia-2021-Luglio.csv",
+                     sep=";")
+August2021 <- read.csv("Venezia-2021-Agosto.csv",
+                       sep=";")
+September2021 <- read.csv("Venezia-2021-Settembre.csv",
+                          sep=";")
+October2021 <- read.csv("Venezia-2021-Ottobre.csv",
+                        sep=";")
+November2021 <- read.csv("Venezia-2021-Novembre.csv",
+                         sep=";")
+December2021 <- read.csv("Venezia-2021-Dicembre.csv",
+                         sep=";")
+weather2021<- rbind(January2021, February2021, March2021, April2021, May2021, 
+                    June2021, July2021, August2021, September2021, October2021,
+                    November2021, December2021)
+rm(list=,"February2021","March2021","April2021","May2021","June2021",
+   "July2021","August2021","September2021","October2021","November2021","December2021")
+
+#2022 weather
+January2022 <- read.csv("Venezia-2022-Gennaio.csv",sep=";")
+February2022 <- read.csv("Venezia-2022-Febbraio.csv",
+                         sep=";")
+March2022 <- read.csv("Venezia-2022-Marzo.csv",
+                      sep=";")
+April2022 <- read.csv("Venezia-2022-Aprile.csv",
+                      sep=";")
+May2022 <- read.csv("Venezia-2022-Maggio.csv",
+                    sep=";")
+June2022 <- read.csv("Venezia-2022-Giugno.csv",
+                     sep=";")
+July2022 <- read.csv("Venezia-2022-Luglio.csv",
+                     sep=";")
+August2022 <- read.csv("Venezia-2022-Agosto.csv",
+                       sep=";")
+September2022 <- read.csv("Venezia-2022-Settembre.csv",
+                          sep=";")
+October2022 <- read.csv("Venezia-2022-Ottobre.csv",
+                        sep=";")
+November2022 <- read.csv("Venezia-2022-Novembre.csv",
+                         sep=";")
+December2022 <- read.csv("Venezia-2022-Dicembre.csv",
+                         sep=";")
+weather2022<- rbind(January2022, February2022, March2022, April2022, May2022, 
+                    June2022, July2022, August2022, September2022, October2022,
+                    November2022, December2022)
+rm(list="January2022","February2022","March2022","April2022","May2022","June2022",
+   "July2022","August2022","September2022","October2022","November2022","December2022")
+
+```
+
+For each year there are 365 observations and 15 variables. To solve some spelling issues and translate the names in English the attributes have been renamed to make them more readable.
+```{r rename variables}
+#Rename variables of weather datasets
+rename_variables <- function(df){
+  colnames(df) <- c("Location","Date","T_med","T_max","T_min","Dew_point",
+                    "Humidity","Visibility","Wind_speed_med",
+                    "Wind_speed_max","Gust","Pressure","Pressure_med","Rain","Phenomena")
+  return(df)
+}
+weather2018 <- rename_variables(weather2018)
+weather2019 <- rename_variables(weather2019)
+weather2021 <- rename_variables(weather2021)
+weather2022 <- rename_variables(weather2022)
+
+```
+
+Let's now visualize the first 5 rows of 2018's dataset.
+```{r five rows visualization, echo=TRUE}
+#5 rows of 2018 weather dataset
+head(weather2018,5)
+
+```
+To enhance the comprehension of the dataset, the subsequent table, enumerates the variables and provides concise explanations for each of them.
+```{r weather dataset predictors, echo=FALSE, message=FALSE}
+
+# Create a data frame with the variable names and descriptions
+data <- data.frame(
+  Variable = c("Location","Date","T_med","T_max","T_min","Dew_point",
+                    "Humidity","Visibility","Wind_speed_med",
+                    "Wind_speed_max","Gust","Pressure","Pressure_med","Rain","Phenomena"),
+  Description = c("Name of the city where the data have been recorded",
+                  "Day of the year when the data have been recorded",
+                  "The average temperature of the day (°C)",
+                  "The highest temperature recorded during the day (°C)",
+                  "The lowest temperature recorded during the day(°C)",
+                  "The temperature at which dew can form (°C) in the day",
+                  "Percentage of the amount of water vapor present in the air",
+                  "The distance at which objects can be clearly seen (km)",
+                  "The average wind speed for the day (km/h)",
+                  "The highest wind speed recorded in the day (km/h)",
+                  "The increase in the strength of the wind (in km/h)",
+                  "The atmospheric pressure at the time of observation (mb)",
+                  "The average atmospheric pressure for the day (mb)",
+                  "The amount of precipitation that fell during the day (mm)",
+                  "Any significant weather events observed, such as thunderstorm, fog, snow, etc."),
+  stringsAsFactors = FALSE
+)
+
+# Create the table using kable
+data$Variable <- paste(data$Variable,"     ")
+
+kable(data, format = "markdown", col.names = c("Variable", "Description")) 
+```
+
+## 1.2 PM10 datasets
+PM10 data are sourced from Arpa Veneto and contain the daily values for each year in question. The datasets of 2019 and 2021 are presented as an XLSX file and are imported through the function *read_excel*.
+```{r upload PM10}
+#Upload PM10 datasets
+PM10_2018 <- read.csv("PM10_2018.txt",sep=" ",na.strings = "NA")
+PM10_2019 <- read_excel("PM10_2019.xlsx")
+PM10_2021 <- read_excel("PM10_2021.xlsx")
+PM10_2022 <- read.csv("PM10_2022.txt",sep=" ",na.strings = "NA")
+
+```
+2018 and 2022 datasets are related to several stations (*Murano*, *Sacca Fisola*, *Rio Novo*, *Parco Bissuola* and *Via Tagliamento*), while 2019 and 2021 datasets contains only the data of *Parco Bissuola* station that is also the nearest to the meteorological station of *Venice Tessera* already considered for the weather. 
+
+```{r dataset preparation not visible, include=FALSE}
+#Removing the first row from 2019 and 2021 dataset that contains only the units
+#of measurement
+PM10_2019 <- PM10_2019[-1,]
+PM10_2021 <- PM10_2021[-1,]
+
+#Rename the column Data as Date
+colnames(PM10_2018)[1] <- "Date"
+colnames(PM10_2019)[1] <- "Date" 
+colnames(PM10_2021)[1] <- "Date"
+colnames(PM10_2022)[1] <- "Date"
+
+```
+
+```{r visualize PM10 datasets}
+#Let's take a look at the first 5 rows of 2018 and 2019 PM10 datasets
+head(PM10_2018,5)
+
+head(PM10_2019,5)
+```
+Between all the stations of 2018 and 2022 dataset, only the stations of Parco Bissuola and Via Tagliamento have been considered. The values of the last station, in fact, will be useful in the upcoming analysis to replace some missing values.
+```{r subset PM10 datasets}
+#Select only the stations of interest for 2018 and 2022 datasets
+PM10_2018 <- subset(PM10_2018, select= c(Date,ParcoBissuola,viaTagliamento))
+PM10_2022 <- subset(PM10_2022, select= c(Date,ParcoBissuola,viaTagliamento))
+```
+
+# 2 Data Preprocessing 
+
+## 2.1 Handling missing values
+The first step of data preprocessing is checking for the presence of missing values in each
+dataset.
+```{r NA values}
+#Checking for the presence of NA values in weather datasets
+sum(is.na(weather2018))
+sum(is.na(weather2019))
+sum(is.na(weather2021))
+sum(is.na(weather2022))
+```
+Specifically, it results that 2019 and 2021 datasets have respectively 12 NA values.
+Let's now take a look at how these missing values are spread out in the features.
+```{r NA visualization}
+#Checking where are the missing values
+sapply(weather2019, function(x) sum(is.na(x)))
+sapply(weather2021, function(x) sum(is.na(x)))
+
+```
+There are only two days where the data are missing. It's possible to identify the
+specific dates and then proceed to replace the missing values using the data of the related month and year for imputation. Since some of the features contain outliers, as the futher analysis will show, the best approach is employing the median imputing, which is a more robust measure of centrality than the mean in such cases. Hence, the missing values are substituted with the median of the pertinent month and year for each variable.
+
+```{r rename variables in February and January, include=FALSE}
+February2019 <- rename_variables(February2019)
+January2021 <- rename_variables(January2021)
+
+```
+
+```{r handling NA}
+#Replace NA values with the median of the specific month and year
+na_row_2019 <- apply(weather2019,1,function(x) any(is.na(x)))
+na_row_2021 <- apply(weather2021,1,function(x) any(is.na(x)))
+#The row with missing values for 2019 dataset is 
+weather2019[na_row_2019,"Date"]
+#The row with missing values for 2021 dataset is 
+weather2021[na_row_2021,"Date"]
+
+#Median imputation
+numeric_v <- colnames(weather2019[sapply(weather2019,is.numeric)])
+weather2019[na_row_2019,numeric_v] <- sapply(February2019[,numeric_v],median,na.rm=T)
+weather2021[na_row_2021,numeric_v] <- sapply(January2021[,numeric_v],median,na.rm=T)
+
+
+#Let's now check if the handling of missing values has been perfomed correctly
+sum(is.na(weather2019))
+sum(is.na(weather2021))
+```
+
+Regarding the PM10, the datasets containing missing values are the ones related to
+2018 and 2022.
+```{r NA values PM10}
+#Checking for NA values in PM10 datasets. The reference station is Parco Bissuola
+#when several stations are present
+sum(is.na(PM10_2018$ParcoBissuola))
+sum(is.na(PM10_2019))
+sum(is.na(PM10_2021))
+sum(is.na(PM10_2022$ParcoBissuola))
+
+```
+
+Given that *Parco Bissuola* is the reference pollution station for the analysis, the methodology for handling missing values deviates from the conventional mean or median substitution. Instead, to provide a more accurate imputation, the data from the nearby *Via Tagliamento* station are utilized, assuming similar environmental conditions due to its proximity.
+```{r handle NA PM10 values}
+#Define a function for handle missing values and make the PM10 datasets uniform
+#in the structure 
+preprocess_PM10 <- function(df){
+  #Substitute the NA of Parco Bissuola with the values in Via Tagliamento
+  df$ParcoBissuola[is.na(df$ParcoBissuola)] <-
+    df$viaTagliamento[is.na(df$ParcoBissuola)]
+  #Removing the unuseful variable Via Tagliamento
+  df$viaTagliamento <- NULL
+  #Rename ParcoBissuola column
+  colnames(df)[colnames(df)=="ParcoBissuola"] <- "PM10"
+  return(df)
+  }
+  
+PM10_2018 <- preprocess_PM10(PM10_2018)
+PM10_2022 <- preprocess_PM10(PM10_2022)
+  
+#Checking if we correctly replace the missing values
+sum(is.na(PM10_2018))
+sum(is.na(PM10_2022))
+```
+
+## 2.2 Data cleaning and preparation 
+The weather datasets from various years can be combined into a final dataset.
+```{r weather dataset}
+#Combining weather data into a final dataset
+weather <- rbind(weather2018, weather2019, weather2021, weather2022)
+```
+
+```{r remove variables, include=FALSE}
+rm(list="February2019", "January2021","weather2018", "weather2019", "weather2021", "weather2022")
+```
+To start the data cleaning and encoding process, let's take a preliminary review of the weather dataset.
+```{r summary weather}
+summary(weather)
+```
+The summary of the dataset reveals several issues that need to be addressed.
+First of all, some covariates, like *Gust*,*Pressure_med* and *Rain* remain unchanged for all the occurrences, as well as *Location*, and can be removed since they don't bring any additional information to the analysis.
+```{r data cleaning}
+#Remove unuseful variables
+weather <- subset(weather, select = -c(Location,Gust,Pressure_med,Rain))
+```
+Another issue highlighted by the dataset summary is the incorrect encoding of the *Phenomena* and *Date* variables. The *Phenomena* covariate, currently formatted as character type, is converted to categorical factor. More specifically, *Phenomena* has 8 different levels with similarities among some. To ensure more robust and interpretable models and to avoid overfitting, the most significant categories are retained and the similar levels are merged.
+
+```{r Phenomena}
+#Table of the initial levels of Phenomena
+table(weather$Phenomena)
+
+#Merging levels 
+weather$Phenomena <- case_when(
+  grepl("temporale", weather$Phenomena) ~ "Storm",
+  grepl("pioggia", weather$Phenomena) ~ "Rain",
+  grepl("nebbia", weather$Phenomena) ~ "Fog",
+  TRUE ~ "No event"
+)
+#Encoding Phenomena as a factor
+weather$Phenomena <- as.factor(weather$Phenomena)
+#The reference level is "No event"
+weather$Phenomena <- relevel(weather$Phenomena, ref="No event")
+
+#Table of Phenomena with the new levels
+table(weather$Phenomena)
+```
+Initially recorded as a character type, the *Date* variable is firstly converted into a Date format. Subsequently, essential components such as the year, month, and day of the week are extracted and encoded as factors based on the rationale that these temporal aspects could potentially influence PM10 levels.
+```{r Date}
+#Encoding the Date variable in the correct type for all the datasets 
+weather$Date <- as.Date(weather$Date,format = "%d/%m/%Y")
+
+PM10_2018$Date <- as.Date(PM10_2018$Date,format = "%d/%m/%Y") 
+PM10_2019$Date <- as.Date(PM10_2019$Date,format = "%d/%m/%Y")  
+PM10_2021$Date <- as.Date(PM10_2021$Date,format = "%d/%m/%Y")  
+PM10_2022$Date <- as.Date(PM10_2022$Date, format ="%d/%m/%Y")
+
+#Extracting the year and encoding as factor
+weather$Year <- as.integer(format(weather$Date,"%y"))
+weather$Year <- as.factor(weather$Year)
+#Extracting the month and encoding as factor
+weather$Month <- as.integer(format(weather$Date, "%m"))
+weather$Month <- as.factor(weather$Month)
+
+#Extracting the day of the week
+#Getting the local time system
+old_locale <- Sys.getlocale("LC_TIME") 
+#Setting the time system to USA
+Sys.setlocale("LC_TIME","en_US") 
+weather$Day_of_week <- weekdays(weather$Date)
+#Setting back to the local time system
+Sys.setlocale("LC_TIME",old_locale) 
+
+#Encoding the day of the week as factor
+weather$Day_of_week <- as.factor(weather$Day_of_week)
+
+```
+## 2.3 Final dataset
+After all these preliminar operations, the PM10 datasets can be merged into a single one. The binary response variable, named *BadAirQuality*, is then is created. This variable is determined by the PM10 values, where it is assigned a value of 0 if the PM10 level of the following day is below ($50 \, \mu g/m^{3}$), and 1 if it exceeds this threshold. The analysis spans four non-consecutive years: 2018, 2019, 2021, and 2022. Due to this non-sequential timeframe, certain dates, such as December 31st of 2019 and 2022, lack corresponding PM10 data. Consequently, the BadAirQuality value for these dates is marked as NA and these instances are excluded from the analysis. 
+
+```{r PM10 merge}
+#Merging all the PM10 datasets
+PM10_data <- rbind(PM10_2018,PM10_2019,PM10_2021,PM10_2022)
+#Encoding the PM10 variable in the correct type (for some datasets it is a character)
+PM10_data$PM10 <- as.integer(PM10_data$PM10)
+#Finding occurrences where the PM10 value are greater than 50
+mask <- as.integer(PM10_data$PM10>=50)
+#Shifting by one occurrence: 
+#this causes a lack of information for the last day 
+sup <- c(mask[-1],NA)
+#Creating the response variable
+PM10_data$BadAirQuality <- sup
+#Encoding it as factor 
+PM10_data$BadAirQuality <- as.factor(PM10_data$BadAirQuality)
+#Day with missing information
+PM10_data$BadAirQuality[PM10_data$Date=='2019-12-31'] <- NA
+#Removing occurrences with missing values
+PM10_data <- na.omit(PM10_data)
+```
+
+```{r remove variables PM10, include=FALSE}
+rm("PM10_2018","PM10_2019","PM10_2021","PM10_2022")
+```
+
+Finally, the weather and PM10 datasets can be merged through an equi-join which is based on the common variable *Date*. After that, since the extraction of all the related information to *Date* has been already performed, the variable is removed.
+```{r final dataset}
+#Constructing the final dataset
+data <- merge(weather,PM10_data)
+#Removing Date
+data$Date <- NULL
+
+```
+
+## 2.4 Class balance check
+It's important to highlight that the response variable *BadAirQuality* is heavily unbalanced towards the good quality air value 0. This imbalance could potentially bias the predictive models towards the more prevalent class. To mitigate this issue, class balancing techniques, such as undersampling, will be employed in further analysis. 
+
+```{r pie chart}
+#Pie chart: balance class check 
+data_pie <- data %>%
+  group_by(BadAirQuality) %>% 
+  summarize(Frequency = n()) %>% 
+  mutate(Percent = paste0(round(Frequency / sum(Frequency) * 100, 2), "%"))
+
+# Plotting the pie chart
+ggplot(data_pie, aes(x = "", y = Frequency, fill = BadAirQuality)) +
+  geom_bar(width = 1, stat = "identity") + 
+  coord_polar(theta = "y") +
+  theme_void() +
+  geom_text(aes(label = Percent), position = position_stack(vjust = 0.5))+
+  theme(legend.title = element_text(size = 10), legend.text = element_text(size = 10)) +
+  scale_fill_brewer(palette = "Blues", labels = c("Good air quality", "Bad air quality")) +
+  labs(fill = "Air Quality")
+
+```
+
+## 2.5 Train and test split
+To evaluate the performances of the models analysed to unseen data, the dataset is divided into training (80%) and test sets (20%). The division is performed in a stratified manner to guarantee that the proportion of each class in the original dataset is maintained in both training and test.
+```{r train and test split}
+#Train-test split: 80% for training and 20% for test
+set.seed(123)
+train_index <- createDataPartition(data$BadAirQuality, p=0.8,list=FALSE)
+train_data <- data[train_index,]
+test_data <- data[-train_index,]
+```
+The proportion of the classes is the same of the original dataset.
+```{r}
+#Checking if the proportions of classes in training and test datasets are the same of the original one
+prop.table(table(train_data$BadAirQuality))
+prop.table(table(test_data$BadAirQuality))
+```
+# 3 Explanatory Data Analysis 
+Explanatory Data Analysis is employed to initially investigate the behavior of the covariates, understand their distributions and examine the relationships between them.
+
+
+## 3.1 Correlation 
+The initial phase of this analysis involves examining the correlations among the variables. Correlation is a statistical measure that quantifies the linear association between two covariates. It essentially indicates how much one variable tends to change in response to a change in another.
+Let's take a look at the correlation matrix to find out what are the most correlated variables. 
+
+```{r correlation matrix}
+#Extracting the numerical variables
+num_features <- subset(train_data, select=-c(Phenomena, Month, Year, Day_of_week, BadAirQuality))
+#Correlation matrix
+cor_matrix <- cor(num_features)
+#Plot the correlation matrix
+corrplot(cor_matrix,method = "color", type = "upper", order = "hclust",
+         tl.col = "black", tl.srt = 45, addCoef.col = "white",
+         number.cex=0.75)
+```
+The correlation matrix reveals a high degree of linear association among several variables. *T_med*, *T_min*, *T_max* and *Dew_point* all exhibit Pearson correlation coefficients exceeding 0.9, indicating a strong positive relationship. This is an expected outcome, as these variables are all related to the temperature conditions.
+Similarly, also *Wind_speed_max* and *Wind_speed_med* are heavily linearly associated. In addition, some considerations about the *Visibility* variable can be made. It's negative correlated with the *Humidity*, which aligns with meteorological principles. In fact, since the percentage of humidity indicates the amount of water vapor contained in the air at a specific temperature, as the humidity level rises, the air approaches its saturation point. After reaching saturation,any additional concentration of water vapor in the air or a small reduction in temperature can cause the condensation of the water vapor in fine dropplets of water, forming fog. These small water particles scatter light in all directions, reducing the visibility. 
+Since the presence of highly correlated variables can become a problem during modeling making also more complicated the interpretability without add any meaningful information, it is prudent to retain only one variable from each group of closely correlated predictors.
+To determine which variables to keep, the correlation with the numeric response variable PM10 comes in handy: within each group of correlated predictors, the variable that exhibits the highest correlation with the response is selected for retention. 
+The variables chosen to be maintained are, thus, *T_max* and *Wind_speed_med*.
+Even if selecting the variables between the most correlated has been done by looking at the response variable in the training set and may thus generate too optimistic results during the cross-validation process for the hyperparameter tuning, we'll see that the results obtained during cross-validation will be close to the true error rate. 
+
+```{r removing highly correlated variables}
+#Removing highly correlated variables
+train_data$T_med <- NULL
+test_data$T_med <- NULL
+train_data$T_min <- NULL
+test_data$T_min <- NULL
+train_data$Dew_point <- NULL
+test_data$Dew_point <- NULL
+train_data$Wind_speed_max <- NULL
+test_data$Wind_speed_max <- NULL
+
+#Removing the numerical response variable used to select the features to retain
+train_data$PM10 <- NULL
+test_data$PM10 <- NULL
+```
+
+## 3.2 Outliers
+During this phase of the analysis, the attention is directed towards the identification of outliers and the possible strategies to handle them.
+```{r outliers}
+par(mfrow=c(2,3))
+boxplot(train_data$T_max, main = "Box plot Max Temperature")
+boxplot(train_data$Humidity, main="Box  plot Humidity")
+boxplot(train_data$Visibility, main ="Box plot Visibility")
+boxplot(train_data$Wind_speed_med, main= "Box plot Wind_speed_med")
+boxplot(train_data$Pressure, main="Box plot Pressure")
+par(mfrow=c(1,1))
+```
+Some of the covariates such as *Pressure*, *Wind_speed_med* and *Visibility* contain outliers. However, these outliers appear to be plausible values and are not indicative of data errors or anomalies. Therefore, there is no need to address or remove these values from the analysis since they can provide useful information for the predictive task.
+
+
+## 3.3 Bivariate Density Analysis
+In order to identify better which are the most discriminant features that can play a significant role in distinguishing between good and bad air quality, the distribution of each continuous predictor for both cases has been plotted.
+
+```{r density plots}
+#Density-plot: Maximum temperature
+plot1 <- ggplot(train_data, aes(x = T_max, fill = BadAirQuality)) +
+                    geom_density(alpha = 0.5) +
+                    coord_cartesian(xlim = c(-3,25)) +
+                    labs(title = "Density Plot T_max", 
+                         x ="T_max") +
+                    scale_fill_discrete(name = "Bad Air Quality",labels=c("No","Yes"))
+#Density-plot: Humidity
+plot2 <-  ggplot(train_data, aes(x = Humidity, fill = BadAirQuality)) +
+                    geom_density(alpha = 0.5) +
+                    coord_cartesian(xlim = c(35,100)) +
+                    labs(title = "Density Plot Humidity", x = "Humidity") +
+                    scale_fill_discrete(name = "Bad Air Quality",labels=c("No","Yes"))
+#Density-plot: Visibility
+plot3 <-  ggplot(train_data, aes(x = Visibility, fill = BadAirQuality)) +
+                    geom_density(alpha = 0.5) +
+                    coord_cartesian(xlim = c(0,23)) +
+                    labs(title = "Density Plot Visibility", x = "Visibility")+
+                    scale_fill_discrete(name = "Bad Air Quality",
+                    labels=c("No","Yes"))
+#Density-plot: Wind_speed_med
+plot4 <-  ggplot(train_data, aes(x = Wind_speed_med, fill = BadAirQuality)) +
+                    geom_density(alpha = 0.5) +
+                    coord_cartesian(xlim = c(5,40)) +
+                    labs(title = "Density Plot Wind_speed_med", 
+                         x = "Wind_speed_med") +
+                    scale_fill_discrete(name = "Bad Air Quality",labels=c("No","Yes"))
+#Density-plot: Pressure
+plot5 <-  ggplot(train_data, aes(x = Pressure, fill = BadAirQuality)) +
+                    geom_density(alpha = 0.5) +
+                    coord_cartesian(xlim = c(990,1035)) +
+                    labs(title = "Density Plot Pressure", x = "Pressure") +
+                    scale_fill_discrete(name = "Bad Air Quality",
+                                        labels=c("No","Yes"))
+grid.arrange(plot1,plot2, plot3, plot4, plot5, ncol=2, nrow=3)
+```
+Some variables like *T_max*,*Visibility* and *Wind_speed_med* have a clearly different distribution between cases of good and bad air quality. Specifically, it's possible to notice that warmer days are associated with a good air quality. Furthermore, these days are also characterized by higher visibility values, indicating that objects can be easily discerned at longer distances, and higher wind speeds, which might help in dispersing fine dust particles. Regarding the other variables, it seems that days with high values of PM10 have high humidity levels. It might be due to the fact that PM10 particles can adhere to water vapor ones, making them heavier, closer to the ground and less prone to be disperse in the atmosphere. Lastly, days with higher atmospheric pressure tend to have a bad air quality. In fact, high-pressure systems are typically associated with stable atmospheric conditions. In these conditions, vertical motion of the air is suppressed and temperature inversions are common: a layer of warm air traps cooler air near the surface and with it also pollutants, leading to the accumulation of PM10.
+It is important to remark that these observations are interpretations and possible explanations for understanding real-world phenomena. They do not assert any causal relationships between the covariates and air quality, whose causal links should be investigated properly. 
+
+## 3.4 Bivariate Categorical Analysis
+The analysis now continues by exploring the relationships between the categorical variables involved and the response through the examination of the barplots.
+
+```{r barplots}
+#Bar plot Phenomena
+counts1 <- train_data %>%
+  group_by(Phenomena, BadAirQuality) %>%
+  summarise(Frequency = n(), .groups="drop")
+
+plot1 <- ggplot(counts1, aes(x = Phenomena, 
+                             y = Frequency, 
+                             fill = BadAirQuality)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Bar Plot Phenomena",
+       x = "Phenomena",
+       y = "Frequency",
+       fill = "BadAirQuality") + coord_cartesian(xlim = c(1,4))+
+  scale_fill_discrete(name = "Bad Air Quality", labels= c("No","Yes"))
+#Bar plot Year
+counts2 <- train_data %>%
+  group_by(Year, BadAirQuality) %>%
+  summarise(Frequency = n(), .groups="drop")
+
+plot2 <- ggplot(counts2, aes(x = Year, 
+                             y = Frequency, 
+                             fill = BadAirQuality)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Bar Plot Year",
+       x = "Year",
+       y = "Frequency",
+       fill = "BadAirQuality") + coord_cartesian(xlim = c(1,4))+
+  scale_fill_discrete(name = "Bad Air Quality", labels=c("No","Yes")) +
+  scale_x_discrete(labels=c("2018","2019","2021","2022"))
+#Bar plot Month
+counts3 <- train_data %>%
+  group_by(Month, BadAirQuality) %>%
+  summarise(Frequency = n(), .groups="drop")
+
+plot3 <- ggplot(counts3, aes(x = Month, 
+                             y = Frequency, 
+                             fill = BadAirQuality)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Bar Plot Month",
+       x = "Month",
+       y = "Frequency",
+       fill = "BadAirQuality") + coord_cartesian(xlim = c(1,12))+
+  scale_fill_discrete(name = "Bad Air Quality", labels=c("No","Yes"))
+#Bar plot Day of week
+counts4 <- train_data %>%
+  group_by(Day_of_week, BadAirQuality) %>%
+  summarise(Frequency = n(), .groups="drop")
+
+plot4 <- ggplot(counts4, aes(x = Day_of_week, 
+                             y = Frequency, 
+                             fill = BadAirQuality)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Bar Plot Day of week",
+       x = "Day of week",
+       y = "Frequency",
+       fill = "BadAirQuality") + coord_cartesian(xlim = c(1,7))+
+  scale_fill_discrete(name = "Bad Air Quality", labels=c("No","Yes")) + 
+  scale_x_discrete(limits=c("Monday","Tuesday","Wednesday","Thursday",
+                            "Friday","Saturday","Sunday"),
+                   labels=c("Monday","Tuesday","Wednesday","Thursday",
+                            "Friday","Saturday","Sunday"))
+```
+
+```{r barplots plotted, echo=FALSE}
+grid.arrange(plot1,plot2)
+grid.arrange(plot3,plot4)
+```
+
+
+Let's break down the observations for each covariate individually.
+
+* Regarding the *Phenomena* variable, the data suggest that rainy days are
+associated with a good air quality. Specifically, the presence of a storm is never linked with high PM10 values. This could be indicative of the effect of the rain that clears the atmosphere of PM10 particles, leading to improved air quality.
+
+* Every year considered tends to have approximately the same number of days with poor air quality.
+
+* The hottest months (May, June, July and August) consistently show low PM10 values. However, it's important to note that this period is associated with another air quality concern: high ozone levels. While PM10 may not be a significant issue during the warmest months, elevated ozone levels can still lead to poor air quality.
+
+* The days with bad air quality are spread out approximately uniformly across the days of the week with a slight peak on Wednesday and lower values on Sunday, Monday and Tuesday. It's essential to remember that the analysis is focused on predicting the air quality for the next day, therefore the frequencies plotted should be interpreted as counts for the following day of the week. The mentioned behavior may be attributed to the fact that weekdays typically have higher industrial and vehicular activities compared to weekends, resulting in smaller emissions of PM10 for the days that follow the weekend (Monday and Tuesday) and higher emissions during the middle of the week (Wednesday).
+
+Since some levels of the factors lead to perfect prediction of the occurrences, the instances of the months May, June, July and August are removed, as well as the ones whose *Phenomena* variable indicates the presence of a storm.
+
+```{r occurrences removal}
+#Removing occurrences of the following months: May,June, July and August
+train_data <- train_data[train_data$Month %in% c(1,2,3,4,9,10,11,12),]
+test_data <- test_data[test_data$Month %in% c(1,2,3,4,9,10,11,12),]
+
+#Removing Storm occurrences
+train_data <- train_data[train_data$Phenomena != "Storm",]
+test_data <- test_data[test_data$Phenomena != "Storm",]
+
+#Checking if the proportion of the classes is still respected between training and test set
+prop.table(table(train_data$BadAirQuality))
+prop.table(table(test_data$BadAirQuality))
+
+
+#Removal of unuseful levels
+train_data$Phenomena <- droplevels(train_data$Phenomena)
+train_data$Month <- droplevels(train_data$Month)
+test_data$Phenomena <- droplevels(test_data$Phenomena)
+test_data$Month <- droplevels(test_data$Month)
+
+```
+
+
+# 4 Models
+The final training dataset is composed of 743 observations and 10 variables.
+```{r final dataset dim}
+dim(train_data)
+
+```
+As previously mentioned, the dataset is quite unbalanced, so to address this issue, the undersampling technique is applied. In the first phase of modeling, the performances of the models trained on the original unbalanced dataset and the balanced one will be compared. This comparative analysis will help determine whether balancing the classes improves the models' ability to predict air quality. 
+```{r undersampling}
+#Dimension of the minority class
+min_class_dim <- dim(train_data[train_data$BadAirQuality==1,])[1]
+#Train balanced dataset: undersampling
+train_balanced<- ovun.sample(BadAirQuality~., 
+                             data = train_data,method = "under",
+                             N=2*min_class_dim, seed = 123)$data
+#Dimension of the undersampled dataset 
+dim(train_balanced)
+#Proportion of the two classes after undersampling
+prop.table(table(train_balanced$BadAirQuality))
+#Removal of unuseful levels
+train_balanced$Phenomena <- droplevels(train_balanced$Phenomena)
+train_balanced$Month <- droplevels(train_balanced$Month)
+
+```
+```{r pie chart 2, include=FALSE}
+#Pie chart: balance class check 
+data_pie <- train_balanced %>%
+  group_by(BadAirQuality) %>% 
+  summarize(Frequency = n()) %>% 
+  mutate(Percent = paste0(round(Frequency / sum(Frequency) * 100, 2), "%"))
+
+# Plotting the pie chart
+ggplot(data_pie, aes(x = "", y = Frequency, fill = BadAirQuality)) +
+  geom_bar(width = 1, stat = "identity") + 
+  coord_polar(theta = "y") +
+  theme_void() +
+  geom_text(aes(label = Percent), position = position_stack(vjust = 0.5))+ theme(legend.title = element_text(size = 10), legend.text = element_text(size = 10)) +
+  scale_fill_brewer(palette = "Blues", labels = c("Good air quality", "Bad air quality")) +
+  labs(fill = "Air Quality")
+
+```
+
+
+In order to have a robust framework for comparing the predictive performances of the models also in presence of the unbalanced dataset in question, several metrics will be employed.
+
+- Accuracy, used to measure the overall correctness of the model.
+
+- Precision, which evaluates the proportion of true positives among all positive predictions.
+
+- Sensitivity, to determine the model's ability to correctly identify all the days with poor air quality. This metrics is particularly important because it shows the extent to which the model is able to detect the days with high PM10 values, thus avoiding health risks associated with exposure of air pollutants to vulnerable people and protecting public health by providing warnings in advance.
+
+- Additionally, the F1-Score will provide a harmonic mean of Precision and Sensitivity, offering a balance between the two in cases where one may be more favorable than the other. 
+
+## 4.1 Logistic Regression: original dataset
+
+The first model analysed is a simple Logistic Regression model, that outputs the probability of poor air quality for the following day. After fitting the model using all the predictors, the presence of multicollinearity between features has been checked using the Variance Inflaction Factor, VIF. While the initial phase of the analysis examined the pairwise collinearity between individual features, VIF is useful for detecting scenarios where a variable might be a linear combination of the other covariates. A value of VIF equal to 1 indicates absence of multicollinearity. Conversely, high VIF values are a  signal of strong multicollinearity which can compromise the model's validity increasing the standard errors of the estimated coefficients.
+Since the dataset contains also categorical predictors with more than two levels, a variation of the Variance Inflaction Factor is considered, that is called Generalized Variance Inflaction Factor (GVIF). While VIF is typically used for models with continuous predictors, GVIF is an extention of VIF to categorical variables. Specifically, for continuous variables the value of GVIF is the same as VIF, while for categorical variables GVIF takes into account the group of dummy variables together rather than individually, resulting in having a single value of GVIF for each categorical predictor. Since GVIF value can be high simply due to the high number of levels a categorical variable have and not because of collinearity, the GVIF should be adjusted by the number of degrees of freedom involved. As a result, for categorical variables, the measure to check for multicollinearity is (GVIF^(1/(2*Df)), where Df is the number of degrees of freedom.
+
+```{r logistic regression}
+#Fitting a logistic regression model
+glm.fit <- glm(BadAirQuality~., data=train_data,
+               family="binomial")
+summary(glm.fit)
+#Checking the VIF for all the predictors
+vif(glm.fit)
+
+```
+From the GVIF values, it's evident that the numerical covariates, especially *T_max*, *Humidity* and *Visibility* present a moderate multicollinearity. Even if multicollinearity is present, for the moment the problem will not be addressed, since their VIF values are above 1 but below the common threshold of 5. Regarding the categorical variables, on the other hand, some GVIF values are high, but the adjusted values which take into account the number of degrees of freedom are all close to 1, indicating lack of collinearity. Thus, no further adjustment is required. 
+
+### 4.1.1 Logistic Regression on original dataset: feature selection
+To select the best model, backward stepwise selection will be applied employing the Bayesian Information Criterion (BIC) as a criterion to minimize. The BIC allows the comparison of models with a different number of predictors since it includes a penalty term on the complexity of the model proportional to the count of predictors utilized. This penalty is weighted by the logarithm of the sample size (log(n)), which tends to favour simpler models as the sample size grows, compared to the Akaike Information Criterion (AIC) which imposes a less stringent penalty. The choice of opting for BIC over AIC in the analysis is double: above improving the model's predictive capability by mitigating overfitting, having fewer coefficients simplifies interpretability.
+
+```{r backward stepwise selection}
+#Training set dimension
+n <- dim(train_data)[1]
+#Backward stepwise selection with BIC as criterion
+mod.R <- step(glm.fit,trace=1,k=log(n), direction="backward")
+#Summary of the selected model
+summary(mod.R)
+
+```
+The selected predictors by the stepwise process are: *T_max*, *Visibility*, *Wind_speed_med*, *Pressure* and *Phenomena*. 
+From the estimates of the coeffiecients, it is shown clearly the role of each variable in predicting air quality. As already suggested by their distributions, given that all the other variables are fixed:
+
+* an increase of one unit in *T_max* decreases the odds ratio of having poor air quality the following day of $e^{-0.212}=0.809$ times;
+
+* an increase of one unit in *Wind_speed_med* affects negatively the probability of having bad air quality the next day, reducing the odds ratio of $e^{-0.369}=0.691$ times;
+
+* an increase of one unit in *Visibility* is negative related with high concentration of PM10 values in the air, decreasing the odds ratio of $e^{-0.137}=0.872$ times;
+
+* conversely, an increase of one unit in *Pressure* raises the odds ratio of having poor air quality in the next day of $e^{0.047}=1.047$ times;
+
+Concerning the categorical variable *Phenomena*, holding all the other variables constant:
+
+* the odds of having poor air quality the next day is about 76% lower in presence of fog compared with the reference level *No event*, given an odds ratio of $e^{-1.432}=0.238$
+
+* the odds of having bad air quality next day is 81% lower if it rains compared with no event happening given an odds ratio of $e^{-1.665}=0.189$.
+
+At first sight, it seems controintuitive that the presence of fog decreases the probability of having bad air quality the following day, but a possible explanation for this phenomenon is that when fog is present the PM10 particles can adhere to water vapor droplets, becoming heavier, falling to the ground purifying the air from pollutants.
+
+```{r Logistic Regression prediction}
+#Extracting the response variable of the test dataset
+y.test <- test_data$BadAirQuality
+test_data$BadAirQuality <- NULL
+#Predicted probabilities 
+glm.pred <- predict(mod.R,newdata=test_data,
+                    type="response")
+#Construting the predictions based on the output probabilities
+logistic.pred <- rep(0,length(y.test))
+logistic.pred[glm.pred>0.5] <- 1
+#Confusion matrix
+conf.matrix <- table(logistic.pred, y.test)
+#Dataframe of the confusion matrix for visualization
+conf.df <- as.data.frame(matrix(0, nrow = 3, ncol = 3))
+colnames(conf.df) <- c("True Good Air","True Bad Air","Total")
+rownames(conf.df) <- c("Pred. Good Air ","Pred. Bad Air", "Total") 
+#Filling the dataframe with the confusion matrix's values
+conf.df[1:2,1:2] <- conf.matrix
+conf.df[,"Total"] <- rowSums(conf.df)
+conf.df["Total",] <- colSums(conf.df)
+
+#Confusion matrix: table
+kable(conf.df, format = "latex", booktabs = TRUE,
+caption = "Confusion Matrix of Logistic Regression on the original dataset. Threshold:0.5") %>%
+  kable_styling(latex_options = "hold_position") %>% column_spec(c(1,3), border_right = TRUE)
+
+#Accuracy
+acc_lr <- mean(logistic.pred==y.test)
+cat("Accuracy: ", acc_lr, "\n")
+
+#Precision 
+prec_lr <- conf.matrix[2,2]/sum(conf.matrix[2,])
+cat("Precision: ", prec_lr, "\n")
+
+#Recall
+recall_lr <- conf.matrix[2,2]/sum(conf.matrix[,2])
+cat("Recall: ", recall_lr, "\n")
+
+#F1-Score
+F1_score <- 2*(prec_lr*recall_lr)/(prec_lr + recall_lr)
+cat("F1-score: ", F1_score, "\n")
+
+```
+The presented results were derived without the optimization of the decision threshold. The observed low recall suggests a need to experiment with lower threshold values, specifically, 0.3 and 0.4. The objective of this step is to enhance the model's sensitivity to detect days with poor air quality, without compromising the general predictive accuracy of the model and its precision.
+
+```{r different threshold: original dataset, echo=FALSE}
+#Construting the predictions based on the output probabilities
+logistic.pred_4 <- rep(0,length(y.test))
+logistic.pred_4[glm.pred>0.4] <- 1
+#Confusion matrix
+conf.matrix_4 <- table(logistic.pred_4, y.test)
+#Dataframe of the confusion matrix for visualization
+conf.df <- as.data.frame(matrix(0, nrow = 3, ncol = 3))
+colnames(conf.df) <- c("True Good Air","True Bad Air","Total")
+rownames(conf.df) <- c("Pred. Good Air ","Pred. Bad Air", "Total") 
+#Filling the dataframe with confusion matrix's values
+conf.df[1:2,1:2] <- conf.matrix_4
+conf.df[,"Total"] <- rowSums(conf.df)
+conf.df["Total",] <- colSums(conf.df)
+
+#Confusion matrix: table
+kable(conf.df, format = "latex", booktabs = TRUE,
+caption = "Confusion Matrix of Logistic Regression on the original dataset. Threshold:0.4") %>% kable_styling(latex_options = "hold_position") %>% column_spec(c(1,3), border_right = TRUE)
+
+#Construting the predictions based on the output probabilities
+logistic.pred_3 <- rep(0,length(y.test))
+logistic.pred_3[glm.pred>0.3] <- 1
+#Confusion matrix
+conf.matrix_3 <- table(logistic.pred_3, y.test)
+#Dataframe of the confusion matrix for visualization
+conf.df <- as.data.frame(matrix(0, nrow = 3, ncol = 3))
+colnames(conf.df) <- c("True Good Air","True Bad Air","Total")
+rownames(conf.df) <- c("Pred. Good Air ","Pred. Bad Air", "Total") 
+#Filling the dataframe with confusion matrix's values
+conf.df[1:2,1:2] <- conf.matrix_3
+conf.df[,"Total"] <- rowSums(conf.df)
+conf.df["Total",] <- colSums(conf.df)
+
+#Confusion matrix: table
+kable(conf.df, format = "latex", booktabs = TRUE,
+caption = "Confusion Matrix of Logistic Regression on the original dataset. Threshold:0.3") %>% kable_styling(latex_options = "hold_position") %>% column_spec(c(1,3), border_right = TRUE)
+
+
+#Accuracy
+acc_lr_4 <- mean(logistic.pred_4==y.test)
+
+#Precision 
+prec_lr_4 <- conf.matrix_4[2,2]/sum(conf.matrix_4[2,])
+
+#Recall
+recall_lr_4 <- conf.matrix_4[2,2]/sum(conf.matrix_4[,2])
+
+#F1-Score
+F1_score_4 <- 2*(prec_lr_4*recall_lr_4)/(prec_lr_4 + recall_lr_4)
+
+
+#Accuracy
+acc_lr_3 <- mean(logistic.pred_3==y.test)
+
+#Precision 
+prec_lr_3 <- conf.matrix_3[2,2]/sum(conf.matrix_3[2,])
+
+#Recall
+recall_lr_3 <- conf.matrix_3[2,2]/sum(conf.matrix_3[,2])
+
+#F1-Score
+F1_score_3 <- 2*(prec_lr_3*recall_lr_3)/(prec_lr_3 + recall_lr_3)
+
+
+df.metrics <- as.data.frame(matrix(0,ncol=3,nrow=4))
+colnames(df.metrics) <- c("0.3","0.4","0.5")
+rownames(df.metrics) <- c("Accuracy","Precision","Recall","F1-score")
+df.metrics[,"0.3"] <- c(acc_lr_3,prec_lr_3,recall_lr_3,F1_score_3)
+df.metrics[,"0.4"] <- c(acc_lr_4,prec_lr_4,recall_lr_4,F1_score_4)
+df.metrics[,"0.5"] <- c(acc_lr,prec_lr,recall_lr,F1_score)
+
+kable(df.metrics, format = "latex", booktabs = TRUE,
+caption = "Metrics for different thresholds: original dataset") %>% kable_styling(latex_options = "hold_position") %>% column_spec(c(1,3), border_right = TRUE)
+
+```
+
+As the following tables show, the best overall threshold that balances the need to identify as many days with poor air quality as possible without a proportional increase in false positives is 0.3.
+
+## 4.2 Logistic Regression: undersampled dataset and stepwise selection
+Let's now fit the logistic regression model on the balanced dataset and apply again the backward stepwise selection.
+
+```{r undersampled dataset}
+#Full logistic regression model on the undersampled dataset
+glm.fit_under <- glm(BadAirQuality~., data=train_balanced, family="binomial")
+summary(glm.fit_under)
+
+#Backward stepwise selection on the undersampled dataset
+#dimension of the undersampled set
+n_under <- dim(train_balanced)[1]
+#Backward stepwise selection with BIC as criterion
+mod.R_under <- step(glm.fit_under,trace=0,k=log(n_under), direction="backward")
+#Summary of the selected model
+summary(mod.R_under)
+```
+The backward stepwise selection for the logistic regression model on the balanced dataset has selected the same covariates obtained without the balacing of the classes, namely *T_max*, *Visibility*, *Wind_speed_med*, *Pressure* and *Phenomena*. 
+
+```{r predictions for the undersampled dataset}
+#Construting the predictions based on the output probabilities
+pred_under <- predict(mod.R_under,newdata=test_data,
+                    type="response")
+logistic.pred_u <- rep(0,length(y.test))
+logistic.pred_u[pred_under>0.6] <- 1
+#Confusion matrix
+conf.matrix_u <- table(logistic.pred_u, y.test)
+#Dataframe of the confusion matrix for visualization
+conf.df <- as.data.frame(matrix(0, nrow = 3, ncol = 3))
+colnames(conf.df) <- c("True Good Air","True Bad Air","Total")
+rownames(conf.df) <- c("Pred. Good Air ","Pred. Bad Air", "Total") 
+#Filling the dataframe with confusion matrix's values
+conf.df[1:2,1:2] <- conf.matrix_u
+conf.df[,"Total"] <- rowSums(conf.df)
+conf.df["Total",] <- colSums(conf.df)
+
+#Confusion matrix: table
+kable(conf.df, format = "latex", booktabs = TRUE,
+caption = "Confusion Matrix of Logistic Regression on the undersampled dataset. Threshold:0.6") %>% 
+  kable_styling(latex_options = "hold_position") %>% column_spec(c(1,3), border_right = TRUE)
+
+
+#Accuracy
+acc_lr_u <- mean(logistic.pred_u==y.test)
+cat("Accuracy: ", acc_lr_u, "\n")
+
+#Precision 
+prec_lr_u <- conf.matrix_u[2,2]/sum(conf.matrix_u[2,])
+cat("Precision: ", prec_lr_u, "\n")
+
+#Recall
+recall_lr_u <- conf.matrix_u[2,2]/sum(conf.matrix_u[,2])
+cat("Recall: ", recall_lr_u, "\n")
+
+#F1-Score
+F1_score_u <- 2*(prec_lr_u*recall_lr_u)/(prec_lr_u + recall_lr_u)
+cat("F1-score: ", F1_score_u, "\n")
+
+```
+The models trained on the balanced dataset successfully achieves the objective of decreasing the rate of false negatives. However, this improvement comes at a cost of increasing the incidence of false positives. Also in this case different thresholds have been experimented and it results that the best overall model is the one with the threshold equal to 0.6.
+
+```{r Different thresholds: undersampled dataset}
+#Construting the predictions based on the output probabilities
+logistic.pred_u4 <- rep(0,length(y.test))
+logistic.pred_u4[pred_under>0.4] <- 1
+#Confusion matrix
+conf.matrix_u4 <- table(logistic.pred_u4, y.test)
+
+
+#Construting the predictions based on the output probabilities
+logistic.pred_u5 <- rep(0,length(y.test))
+logistic.pred_u5[pred_under>0.5] <- 1
+#Confusion matrix
+conf.matrix_u5 <- table(logistic.pred_u5, y.test)
+
+#Accuracy
+acc_lr_u4 <- mean(logistic.pred_u4==y.test)
+
+#Precision 
+prec_lr_u4 <- conf.matrix_u4[2,2]/sum(conf.matrix_u4[2,])
+
+#Recall
+recall_lr_u4 <- conf.matrix_u4[2,2]/sum(conf.matrix_u4[,2])
+
+#F1-Score
+F1_score_u4 <- 2*(prec_lr_u4*recall_lr_u4)/(prec_lr_u4 + recall_lr_u4)
+
+
+#Accuracy
+acc_lr_u5 <- mean(logistic.pred_u5==y.test)
+
+#Precision 
+prec_lr_u5 <- conf.matrix_u5[2,2]/sum(conf.matrix_u5[2,])
+
+#Recall
+recall_lr_u5 <- conf.matrix_u5[2,2]/sum(conf.matrix_u5[,2])
+
+#F1-Score
+F1_score_u5 <- 2*(prec_lr_u5*recall_lr_u5)/(prec_lr_u5 + recall_lr_u5)
+
+
+df.metrics <- as.data.frame(matrix(0,ncol=3,nrow=4))
+colnames(df.metrics) <- c("0.4","0.5","0.6")
+rownames(df.metrics) <- c("Accuracy","Precision","Recall","F1-score")
+df.metrics[,"0.4"] <- c(acc_lr_u4,prec_lr_u4,recall_lr_u4,F1_score_u4)
+df.metrics[,"0.5"] <- c(acc_lr_u5,prec_lr_u5,recall_lr_u5,F1_score_u5)
+df.metrics[,"0.6"] <- c(acc_lr_u,prec_lr_u,recall_lr_u,F1_score_u)
+
+kable(df.metrics, format = "latex", booktabs = TRUE,
+caption = "Metrics for different thresholds: undersampled dataset") %>%
+  kable_styling(latex_options = "hold_position") %>% column_spec(c(1,3), border_right = TRUE)
+
+```
+
+
+## 4.3 Interaction effects
+To have a deeper understanding of how the relationships between covariates influence the predictions, interaction terms are included in the Logistic Regression model. The aim is to capture the combined effects of the variables that are not evident when considering the predictors independently. All the variables selected by the backwise stepwise procedure are considered to fit the model as primary predictors and all the possible second order interaction terms between them. Regarding the continuous variables, also third and fourth order interactions are included. It's important to highlight that the interaction terms between the categorical variable *Phenomena* and the continuous variables help to determine whether the relationship between each continuous variable and the response changes across the different levels of the categorical variable (*No event*, *Fog* and *Rain*).
+After fitting the full model on the original training dataset, backward stepwise selection is again performed to find the most significant predictors. The metric chosen to minimize this time is the Akaike Information Criterion (AIC).
+
+```{r interaction effects}
+#Logistic regression with interaction effects
+glm.fit.int <- glm(BadAirQuality~Visibility+Pressure+Wind_speed_med+T_max+Phenomena+
+                     Visibility:Pressure+Visibility:Wind_speed_med+
+                     Pressure:Wind_speed_med+Visibility:T_max+
+                     Pressure:T_max+Wind_speed_med:T_max+
+                     Visibility:Pressure:Wind_speed_med+
+                     Visibility:Pressure:T_max+Visibility:Wind_speed_med:T_max+
+                     Pressure:Wind_speed_med:T_max+
+                     Visibility:Pressure:Wind_speed_med:T_max+
+                     Phenomena:T_max+Phenomena:Wind_speed_med+
+                     Phenomena:Pressure+ Phenomena:Visibility, data=train_data,
+                   family="binomial")
+summary(glm.fit.int)
+
+#Stepwise Backward selection based on AIC
+mod.R_int <- step(glm.fit.int,direction="backward",trace=0)
+summary(mod.R_int)
+
+```
+
+With interaction terms, the coefficients of the main effects are no longer interpreted as the effects on the outcome for a one-unit change in the predictor when all other variables are held constant. Instead, they represent the effect when the interacting variables are held at zero, which may not be a meaningful condition, especially for some variables like *Pressure* whose range does not include the zero value. When considering interactions, for the main effects, the impact on the probability of having bad air quality depends on the values of the other variables with they interact with that can have a synergetic or antagonist effect.
+The significant terms kept by the backward stepwise selection are *Visibility*, *T_max*, *Wind_speed_med*, *PhenomenaRain*, *PhenomenaFog* and the interaction terms *Visibility:Pressure*, *Visibility:T_max*, *Pressure:Wind_speed_med* and *Pressure:T_max*.
+From the summary of the model, it's evident that for the hierarchical principle since the interaction terms are included in the model, also the main effects are included even if their p-value are not significant. This means that *Pressure* does not have a significant independent effect on the response, but its effect becomes significant when *Visibility*, *T_max* and *Wind_speed_med* variables are taken into account. Let's analyze the significant interaction terms:
+
+- Visibility:T_max. The negative coefficient shows that the effect of *T_max* on the log-odds of having bad air quality decreases as *Visibility* increases. In other words, the presence of higher visibility levels moderates the impact that *T_max* has on the likelihood of bad air quality.
+
+- Visibility:Pressure. From the positive coefficient is clear that higher visibility values increase the effect of pressure on the likelihood of bad air quality.
+
+- Pressure:Wind_speed_med. This interaction term has a negative coefficient, indicating that the effect of pressure on the log-odds of bad air quality decreases as wind speed is higher. 
+
+- Pressure:T_max. The positive coefficient shows that *T_max* has a synergetic effect for the *Pressure* on the log-odds of bad air quality. 
+
+
+
+```{r Interaction effects predictions}
+#Predictions
+glm.pred.int <- predict(mod.R_int, newdata=test_data, type="response")
+logistic.pred_int <- rep(0,length(y.test))
+#Different thresholds tested:0.3,0.4,0.5
+logistic.pred_int[glm.pred.int > 0.3] <- 1
+
+#Confusion matrix 
+conf.matrix_int <- table(as.factor(logistic.pred_int), y.test)
+
+#Dataframe of the confusion matrix for visualization
+conf.df <- as.data.frame(matrix(0, nrow = 3, ncol = 3))
+colnames(conf.df) <- c("True Good Air","True Bad Air","Total")
+rownames(conf.df) <- c("Pred. Good Air ","Pred. Bad Air", "Total")
+
+#Filling the dataframe with confusion matrix's values
+conf.df[1:2,1:2] <- conf.matrix_int
+conf.df[,"Total"] <- rowSums(conf.df)
+conf.df["Total",] <- colSums(conf.df)
+
+#Confusion matrix: table
+kable(conf.df, format = "latex", booktabs = TRUE,
+caption = 
+  "Confusion Matrix of Logistic Regression model with interaction terms 
+on the original training dataset. Threshold: 0.3") %>% 
+  kable_styling(latex_options = "hold_position") %>% 
+  column_spec(c(1,3), border_right = TRUE)
+
+
+#Accuracy
+acc_int <- mean(logistic.pred_int==y.test)
+cat("Accuracy: ", acc_int, "\n")
+
+#Precision 
+prec_int <- conf.matrix_int[2,2]/sum(conf.matrix_int[2,])
+cat("Precision: ", prec_int, "\n")
+
+#Recall
+recall_int <- conf.matrix_int[2,2]/sum(conf.matrix_int[,2])
+cat("Recall: ", recall_int, "\n")
+
+#F1-Score
+F1_score_int <- 2*(prec_int*recall_int)/(prec_int + recall_int)
+cat("F1-score: ", F1_score_int, "\n")
+```
+**Interaction effects on the undersampled dataset** 
+
+```{r Interaction on the undersampled dataset}
+#Interaction effects on the balanced training set
+glm.fit.int_u <- glm(BadAirQuality~Visibility+Pressure+Wind_speed_med+T_max+Phenomena+
+                     Visibility:Pressure+Visibility:Wind_speed_med+
+                     Pressure:Wind_speed_med+Visibility:T_max+
+                     Pressure:T_max+Wind_speed_med:T_max+
+                     Visibility:Pressure:Wind_speed_med+
+                     Visibility:Pressure:T_max+Visibility:Wind_speed_med:T_max+
+                     Pressure:Wind_speed_med:T_max+
+                     Visibility:Pressure:Wind_speed_med:T_max+
+                     Phenomena:T_max+Phenomena:Wind_speed_med+
+                     Phenomena:Pressure+ Phenomena:Visibility, 
+                     data=train_balanced, family="binomial")
+
+#Stepwise Backward selection based on AIC
+mod.R_int_u <- step(glm.fit.int_u,direction="backward", trace=0)
+summary(mod.R_int_u)
+```
+
+On the undersampled dataset, the significant covariates retained by the backward stepwise selection are *Visibility*, *PhenomenaRain*, *PhenomenaFog* and the interaction terms *Visibility:Pressure*, *Visibility:Wind_speed_med*, *Visibility:T_max* and *Visibility:Pressure:Wind_speed_med*. In this case, also a third-order interaction term is included. It shows a more complex relationship between these three variables: as *Wind_speed_med* increases, it changes the combined effect of *Visibility* and *Pressure* on the log-odds of bad air quality. The negative sign indicates that the combined effect of visibility and pressure on bad air quality is reduced with higher wind speed. In fact, visibility and pressure's impact may be reduced on air quality since higher wind speed disperse pollutants.
+
+```{r Interaction effects undersampled dataset predictions}
+#Predictions
+glm.pred.int_u <- predict(mod.R_int_u, newdata=test_data, type="response")
+logistic.pred_int_u <- rep(0,length(y.test))
+#Different thresholds tested:0.3,0.4,0.5
+logistic.pred_int_u[glm.pred.int_u > 0.4] <- 1
+
+#Confusion matrix 
+conf.matrix_int_u <- table(as.factor(logistic.pred_int_u), y.test)
+
+#Dataframe of the confusion matrix for visualization
+conf.df <- as.data.frame(matrix(0, nrow = 3, ncol = 3))
+colnames(conf.df) <- c("True Good Air","True Bad Air","Total")
+rownames(conf.df) <- c("Pred. Good Air ","Pred. Bad Air", "Total")
+
+#Filling the dataframe with confusion matrix's values
+conf.df[1:2,1:2] <- conf.matrix_int_u
+conf.df[,"Total"] <- rowSums(conf.df)
+conf.df["Total",] <- colSums(conf.df)
+
+#Confusion matrix: table
+kable(conf.df, format = "latex", booktabs = TRUE,
+caption = "Confusion Matrix of Logistic Regression model with 
+interaction terms on the undersampled training dataset. Threshold: 0.4") %>% 
+  kable_styling(latex_options = "hold_position") %>% 
+  column_spec(c(1,3), border_right = TRUE)
+
+
+#Accuracy
+acc_int_u <- mean(logistic.pred_int_u==y.test)
+cat("Accuracy: ", acc_int_u, "\n")
+
+#Precision 
+prec_int_u <- conf.matrix_int_u[2,2]/sum(conf.matrix_int_u[2,])
+cat("Precision: ", prec_int_u, "\n")
+
+#Recall
+recall_int_u <- conf.matrix_int_u[2,2]/sum(conf.matrix_int_u[,2])
+cat("Recall: ", recall_int_u, "\n")
+
+#F1-Score
+F1_score_int_u <- 2*(prec_int_u*recall_int_u)/(prec_int_u + recall_int_u)
+cat("F1-score: ", F1_score_int_u, "\n")
+```
+
+
+
+## 4.4 Discriminant Analysis
+Two classification algorithms commonly used for solving classification problems are Linear Discriminant Analysis (LDA) and Quadratic Discriminant Analysis (QDA). These algorithms rely on assumptions about the normality of the covariates' distributions in the two classes, "Bad Air Quality" and "Good Air Quality". To validate this assumption the Shapiro-Wilk test has been employed. 
+The Shapiro-Wilk test is a hypothesis test for verifying the normality. By setting a significance level, typically 0.05, if the p-value is less than or equal to 0.05, the alternative hypothesis, which states that the distribution of the data is not normal, is accepted. In the context of this analysis, the Shapiro-Wilk test will be exclusively applied to the original unbalanced training dataset.
+
+```{r Shapiro-Wilk tests}
+#Shapiro-Wilk test: T_max
+shapiro.test(train_data$T_max[train_data$BadAirQuality==1])
+shapiro.test(train_data$T_max[train_data$BadAirQuality==0])
+
+#Shapiro-Wilk test: Wind_speed_med
+shapiro.test(train_data$Wind_speed_med[train_data$BadAirQuality==0])
+shapiro.test(train_data$Wind_speed_med[train_data$BadAirQuality==1])
+
+#Shapiro-Wilk test: Pressure
+shapiro.test(train_data$Pressure[train_data$BadAirQuality==0])
+shapiro.test(train_data$Pressure[train_data$BadAirQuality==1])
+
+#Shapiro-Wilk test: Humidity
+shapiro.test(train_data$Humidity[train_data$BadAirQuality==0])
+shapiro.test(train_data$Humidity[train_data$BadAirQuality==1])
+
+#Shapiro-Wilk test: Visibility
+shapiro.test(train_data$Visibility[train_data$BadAirQuality==1])
+shapiro.test(train_data$Visibility[train_data$BadAirQuality==0])
+```
+
+While all the variables, except for the *Pressure* distribution in the "Bad Air Quality" class, do not meet the normality assumption, both Linear Discriminant Analysis (LDA) and Quadratic Discriminant Analysis (QDA) will be performed, despite the initial assumptions. In fact, although real-world data often deviates from strict normality assumptions, LDA and QDA can still perform well in classification tasks. 
+
+### 4.4.1 Linear Discriminant Analysis
+LDA generates a linear decision boundary and one of its key assumption is that all classes share the same covariance matrix. It will be performed both on the original dataset and on the balanced one, considering different thresholds. The features considered to fit the model are the one selected by the stepwise backward procedure, since it results in best performances as the removal of irrelevant and redundant features avoid overfitting.
+
+```{r LDA}
+#LDA on the original unbalanced dataset
+lda.fit <- lda(BadAirQuality~.-Humidity-Month-Year-Day_of_week,data=train_data)
+lda.fit
+
+#Histograms of the discriminant scores of two classes
+plot(lda.fit, type="histogram")
+
+#Prediction
+lda.pred <- predict(lda.fit, newdata=test_data, type="response")
+
+#Posterior probabilities
+post_lda<- lda.pred$posterior
+
+train_index <- createDataPartition(train_data$BadAirQuality, p=0.8,list=FALSE)
+final_train <- train_data[train_index]
+val_data <- train_data[-train_index]
+
+#Different thresholds tested (0.3,0.4,0.5)
+pred_lda<- as.factor(ifelse(post_lda[,2] > 0.3, 1, 0))
+
+#Confusion matrix with the best threshold: 0.3
+conf.matrix_lda <- table(pred_lda, y.test)
+
+#Dataframe of the confusion matrix for visualization
+conf.df <- as.data.frame(matrix(0, nrow = 3, ncol = 3))
+colnames(conf.df) <- c("True Good Air","True Bad Air","Total")
+rownames(conf.df) <- c("Pred. Good Air ","Pred. Bad Air", "Total")
+
+#Filling the dataframe with confusion matrix's values
+conf.df[1:2,1:2] <- conf.matrix_lda
+conf.df[,"Total"] <- rowSums(conf.df)
+conf.df["Total",] <- colSums(conf.df)
+
+#Confusion matrix: table
+kable(conf.df, format = "latex", booktabs = TRUE,
+caption = "Confusion Matrix of LDA on the original dataset. 
+Best threshold: 0.3") %>% kable_styling(latex_options = "hold_position") %>%
+  column_spec(c(1,3), border_right = TRUE)
+
+
+#Accuracy
+acc_lda <- mean(pred_lda==y.test)
+cat("Accuracy: ", acc_lda, "\n")
+
+#Precision 
+prec_lda <- conf.matrix_lda[2,2]/sum(conf.matrix_lda[2,])
+cat("Precision: ", prec_lda, "\n")
+
+#Recall
+recall_lda <- conf.matrix_lda[2,2]/sum(conf.matrix_lda[,2])
+cat("Recall: ", recall_lda, "\n")
+
+#F1-Score
+F1_score_lda <- 2*(prec_lda*recall_lda)/(prec_lda + recall_lda)
+cat("F1-score: ", F1_score_lda, "\n")
+
+
+```
+
+**LDA on the undersampled dataset** 
+
+```{r LDA undersampled dataset}
+#LDA on the balanced dataset
+lda.under <- lda(BadAirQuality~.-Humidity-Month-Year-Day_of_week,
+                 data=train_balanced)
+lda.under
+
+
+#Prediction
+lda.pred_u <- predict(lda.under, newdata=test_data, type="response")
+
+#Posterior probabilities
+post_lda_u<- lda.pred_u$posterior
+#Setting the threshold: different thresholds tested (0.4,0.5,0.6)
+pred_lda_u<- as.factor(ifelse(post_lda_u[,2] > 0.5, 1, 0))
+
+#Confusion matrix with the best threshold: 0.3
+conf.matrix_lda_u <- table(pred_lda_u, y.test)
+
+#Dataframe of the confusion matrix for visualization
+conf.df <- as.data.frame(matrix(0, nrow = 3, ncol = 3))
+colnames(conf.df) <- c("True Good Air","True Bad Air","Total")
+rownames(conf.df) <- c("Pred. Good Air ","Pred. Bad Air", "Total")
+
+#Filling the dataframe with confusion matrix's values
+conf.df[1:2,1:2] <- conf.matrix_lda_u
+conf.df[,"Total"] <- rowSums(conf.df)
+conf.df["Total",] <- colSums(conf.df)
+
+#Confusion matrix: table
+kable(conf.df, format = "latex", booktabs = TRUE,
+caption = "Confusion Matrix of LDA on the undersampled dataset. 
+Best threshold: 0.5") %>% kable_styling(latex_options = "hold_position") %>%
+  column_spec(c(1,3), border_right = TRUE)
+
+
+#Accuracy
+acc_lda_u <- mean(pred_lda_u==y.test)
+cat("Accuracy: ", acc_lda_u, "\n")
+
+#Precision 
+prec_lda_u <- conf.matrix_lda_u[2,2]/sum(conf.matrix_lda_u[2,])
+cat("Precision: ", prec_lda_u, "\n")
+
+#Recall
+recall_lda_u <- conf.matrix_lda_u[2,2]/sum(conf.matrix_lda_u[,2])
+cat("Recall: ", recall_lda_u, "\n")
+
+#F1-Score
+F1_score_lda_u <- 2*(prec_lda_u*recall_lda_u)/(prec_lda_u + recall_lda_u)
+cat("F1-score: ", F1_score_lda_u, "\n")
+
+
+```
+
+Similarly to what happens with the Logistic Regression model, the model trained over the balanced set obtained through undersampling outperforms the one trained over the original set. Even if the accuracy is the same, the sensitivity is higher (0.875 vs 0.725), and thus, the F1-score.
+Looking at the histograms of the discriminant scores for each class, it's evident that the two groups are not very well separated and there's a lot of overlap. This shows that the model has difficulty in clearly distinguishing between the poor and good air classes and for this reason it is less effective compared to the Logistic Regression.
+
+
+### 4.4.2 Quadratic Discriminant Analysis (QDA)
+The LDA assumption that all the classes share the same covariance matrix can be quite restrictive. QDA is more flexible in its approach and allows each class to have its own covariance matrix. Moreover, its the decision boundary is not linear, as the one of LDA, but quadratic. 
+
+```{r QDA}
+#QDA on the original unbalanced dataset
+qda.fit <- qda(BadAirQuality~.-Humidity-Month-Year-Day_of_week,data=train_data)
+qda.fit
+
+#Prediction
+qda.pred <- predict(qda.fit, newdata=test_data, type="response")
+
+#Posterior probabilities
+post_qda<- qda.pred$posterior
+#Setting the threshold: different thresholds tested (0.3,0.4,0.5)
+pred_qda<- as.factor(ifelse(post_qda[,2] > 0.3, 1, 0))
+
+#Confusion matrix with the best threshold: 0.3
+conf.matrix_qda <- table(pred_qda, y.test)
+
+#Dataframe of the confusion matrix for visualization
+conf.df <- as.data.frame(matrix(0, nrow = 3, ncol = 3))
+colnames(conf.df) <- c("True Good Air","True Bad Air","Total")
+rownames(conf.df) <- c("Pred. Good Air ","Pred. Bad Air", "Total")
+
+#Filling the dataframe with confusion matrix's values
+conf.df[1:2,1:2] <- conf.matrix_qda
+conf.df[,"Total"] <- rowSums(conf.df)
+conf.df["Total",] <- colSums(conf.df)
+
+#Confusion matrix: table
+kable(conf.df, format = "latex", booktabs = TRUE,
+caption = "Confusion Matrix of QDA on the original dataset. 
+Best threshold: 0.3") %>% kable_styling(latex_options = "hold_position") %>% 
+  column_spec(c(1,3), border_right = TRUE)
+
+
+#Accuracy
+acc_qda <- mean(pred_qda==y.test)
+cat("Accuracy: ", acc_qda, "\n")
+
+#Precision 
+prec_qda <- conf.matrix_qda[2,2]/sum(conf.matrix_qda[2,])
+cat("Precision: ", prec_qda, "\n")
+
+#Recall
+recall_qda <- conf.matrix_qda[2,2]/sum(conf.matrix_qda[,2])
+cat("Recall: ", recall_qda, "\n")
+
+#F1-Score
+F1_score_qda <- 2*(prec_qda*recall_qda)/(prec_qda + recall_qda)
+cat("F1-score: ", F1_score_qda, "\n")
+
+
+```
+**QDA on the undersampled dataset** 
+```{r QDA undersampled dataset}
+#QDA on the balanced dataset
+qda.under <- qda(BadAirQuality~.-Humidity-Month-Year-Day_of_week,
+                 data=train_balanced)
+qda.under
+
+
+#Prediction
+qda.pred_u <- predict(qda.under, newdata=test_data, type="response")
+
+#Posterior probabilities
+post_qda_u<- qda.pred_u$posterior
+#Setting the threshold: different thresholds tested (0.4,0.5,0.6)
+pred_qda_u<- as.factor(ifelse(post_qda_u[,2] > 0.5, 1, 0))
+
+#Confusion matrix with the best threshold: 0.3
+conf.matrix_qda_u <- table(pred_qda_u, y.test)
+
+#Dataframe of the confusion matrix for visualization
+conf.df <- as.data.frame(matrix(0, nrow = 3, ncol = 3))
+colnames(conf.df) <- c("True Good Air","True Bad Air","Total")
+rownames(conf.df) <- c("Pred. Good Air ","Pred. Bad Air", "Total")
+
+#Filling the dataframe with confusion matrix's values
+conf.df[1:2,1:2] <- conf.matrix_qda_u
+conf.df[,"Total"] <- rowSums(conf.df)
+conf.df["Total",] <- colSums(conf.df)
+
+#Confusion matrix: table
+kable(conf.df, format = "latex", booktabs = TRUE,
+caption = "Confusion Matrix of QDA on the undersampled dataset. 
+Best threshold: 0.5") %>% kable_styling(latex_options = "hold_position") %>% 
+  column_spec(c(1,3), border_right = TRUE)
+
+
+#Accuracy
+acc_qda_u <- mean(pred_qda_u==y.test)
+cat("Accuracy: ", acc_qda_u, "\n")
+
+#Precision 
+prec_qda_u <- conf.matrix_qda_u[2,2]/sum(conf.matrix_qda_u[2,])
+cat("Precision: ", prec_qda_u, "\n")
+
+#Recall
+recall_qda_u <- conf.matrix_qda_u[2,2]/sum(conf.matrix_qda_u[,2])
+cat("Recall: ", recall_qda_u, "\n")
+
+#F1-Score
+F1_score_qda_u <- 2*(prec_qda_u*recall_qda_u)/(prec_qda_u + recall_qda_u)
+cat("F1-score: ", F1_score_qda_u, "\n")
+
+
+```
+
+The performances on the original training set are the same in term of accuracy (0.835) compared to the ones obtained with the undersampled dataset even if the latter has a slightly lower false negative rate (recall values are 0.825 and 0.85 respectively).
+However, the results are quite similar to the ones obtained using Linear Discriminant Analysis.
+
+**Models comparison: Original vs Undersampled Dataset**
+
+From an initial comparison of the models, fitted utilizing the optimal threshold for each, it's possible to see that the balanced dataset achieves better performances both in terms of accuracy and in terms of sensitivity for all the models, except the Logistic Regression with the interaction terms. The lower accuracy of this model on the balanced dataset, compared to the original one, can be attributed to the removal of important occurrences, due to the undersampling procedure, that were relevant in capturing some interactions between the covariates. However, the model with interactions terms fitted on the undersampled dataset has a higher sensitivity. 
+Therefore, based on the outcomes achieved so far, the analysis will proceed with fitting the models exclusively on the balanced dataset.
+
+```{r Model comparison: Original VS Undersampled}
+#Model metrics for the original training set
+table_data <- data.frame(
+Model = c("Logistic Regression", "Logistic with interactions", "LDA", "QDA"),
+Accuracy = round(c(acc_lr_3,acc_int, acc_lda, acc_qda), digits=3),
+Sensitivity = round(c(recall_lr_3,recall_int, recall_lda, recall_qda), digits=3),
+F1_score = round(c(F1_score_3,F1_score_int, F1_score_lda, F1_score_qda), digits=3)
+)
+kable(table_data, format = "latex", booktabs = T,
+caption = "Model metrics for Original Train Set") %>%
+kable_styling(latex_options = c("striped", "hold_position"))
+
+#Model metrics for the undersampled dataset
+table_data <- data.frame(
+Model = c("Logistic Regression","Logistic with interactions", "LDA", "QDA"),
+Accuracy = round(c(acc_lr_u,acc_int_u, acc_lda_u, acc_qda_u), digits=3),
+Sensitivity = round(c(recall_lr_u,recall_int_u, recall_lda_u, recall_qda_u), digits=3),
+F1_score = round(c(F1_score_u,F1_score_int_u, F1_score_lda_u, F1_score_qda_u), digits=3)
+)
+kable(table_data, format = "latex", booktabs = T,
+caption = "Model metrics for the Undersampled Train Set") %>%
+kable_styling(latex_options = c("striped", "hold_position"))
+
+```
+
+
+## 4.5 Naive Bayes
+Another model that can be used in classification tasks is Naive Bayes. It relies on the assumption that features within each class are independent of each other. This independence assumption simplifies the computation of joint probability distributions in Bayes' formula, allowing for the use of marginal distributions. As it's evident from the two correlation matrices below, some predictors are slightly correlated, and thus dependent. However, the Naive Bayes model is known for its robustness and often produces good results, even when the assumption of independence is violated. Therefore, Naive Bayes model remains a possible approach. The model is fitted only on the variables selected by the backward stepwise process and its decision boundary has been adjusted varying thresholds on the posterior probabilities. The best threshold results to be 0.6.
+
+```{r Correlation and independence}
+#Numerical features extraction for the two classes
+num_features_poor <- subset(train_balanced[train_balanced$BadAirQuality==1,],
+                            select=-c(Phenomena, Month, Year, Day_of_week, BadAirQuality,Humidity))
+
+num_features_good <- subset(train_balanced[train_balanced$BadAirQuality==0,],
+                            select=-c(Phenomena, Month, Year, Day_of_week, BadAirQuality,Humidity))
+
+#Correlation matrix of the numerical variables
+cor_matrix_poor <- cor(num_features_poor)
+cor_matrix_good <- cor(num_features_good)
+
+
+# Plot the correlation matrices
+par(mfrow=c(1,2))
+corrplot(cor_matrix_poor,method = "color", type = "upper", order = "hclust",
+         tl.col = "black", tl.srt = 45, addCoef.col = "white",
+         number.cex=0.5, cl.pos="n",main="\n\nBadAirQuality=1")
+corrplot(cor_matrix_good,method = "color", type = "upper", order = "hclust",
+         tl.col = "black", tl.srt = 45, addCoef.col = "white",
+         number.cex=0.5, cl.pos="n", main="\n\nBadAirQuality=0")
+```
+
+```{r Naive Bayes model}
+#Naive Bayes model
+nb.fit <- naiveBayes(BadAirQuality ~.-Year-Month-Day_of_week-Humidity, 
+                     data = train_balanced)
+nb.fit
+
+#Predictions
+pred_nb <- predict(nb.fit, test_data, type = "raw")
+
+#Setting the threshold: different thresholds tested (0.4,0.5,0.6)
+nb.class <- ifelse(pred_nb[, 2] > 0.6, 1,0) 
+
+#Confusion matrix 
+conf.matrix_nb <- table(nb.class, y.test)
+
+#Dataframe of the confusion matrix for visualization
+conf.df <- as.data.frame(matrix(0, nrow = 3, ncol = 3))
+colnames(conf.df) <- c("True Good Air","True Bad Air","Total")
+rownames(conf.df) <- c("Pred. Good Air ","Pred. Bad Air", "Total")
+
+#Filling the dataframe with confusion matrix's values
+conf.df[1:2,1:2] <- conf.matrix_nb
+conf.df[,"Total"] <- rowSums(conf.df)
+conf.df["Total",] <- colSums(conf.df)
+
+#Confusion matrix: table
+kable(conf.df, format = "latex", booktabs = TRUE,
+caption = "Confusion Matrix of Naive Bayes on the undersampled dataset. 
+Best threshold: 0.6") %>% kable_styling(latex_options = "hold_position") %>%
+  column_spec(c(1,3), border_right = TRUE)
+
+
+#Accuracy
+acc_nb <- mean(nb.class==y.test)
+cat("Accuracy: ", acc_nb, "\n")
+
+#Precision 
+prec_nb <- conf.matrix_nb[2,2]/sum(conf.matrix_nb[2,])
+cat("Precision: ", prec_nb, "\n")
+
+#Recall
+recall_nb <- conf.matrix_nb[2,2]/sum(conf.matrix_nb[,2])
+cat("Recall: ", recall_nb, "\n")
+
+#F1-Score
+F1_score_nb <- 2*(prec_nb*recall_nb)/(prec_nb + recall_nb)
+cat("F1-score: ", F1_score_nb, "\n")
+```
+
+## 4.6 Shrinkage methods
+The analysis continues with the regularized methods: Ridge and Lasso Regression. To control the complexity of the models they introduce a penalization term which shrinks the values of the coefficients towards zero. In Ridge Regression all the variables are kept, while in Lasso Regression some of the coefficients are set exactly equal to zero. The regularization parameter $\lambda$ has been selected by the means of a 10-fold cross validation as the one that results in having the minimum classification error. 
+
+
+### 4.6.1 Ridge Regression
+Ridge Regression applies an L2 penalty, which imposes quadratic shrinkage on the coefficients of the model. It is specifically suited in collinearity problems (where Lasso fails) since makes the coefficients' estimates more stable.
+
+```{r Ridge Regression}
+#Model matrix: training set
+x_train<-model.matrix(~.-1, data=train_balanced[,-10])
+#Response values of the training set
+y.train <- train_balanced$BadAirQuality
+
+#Model matrix: test set
+x_test<-model.matrix(~.-1, data=test_data)
+
+#Ridge regression: cross validation to select the best lambda based 
+#on the classification error
+cvfit.ridge <- cv.glmnet(x_train, y.train, alpha=0,family="binomial",
+                         type.measure="class",set.seed=123)
+plot(cvfit.ridge)
+
+#Best lambda
+best_lambda <- cvfit.ridge$lambda.min
+best_lambda
+
+pred.ridge <- predict(cvfit.ridge, x_test, type="class", s=best_lambda)
+
+#Confusion matrix 
+conf.matrix_ridge <- table(pred.ridge, y.test)
+
+#Dataframe of the confusion matrix for visualization
+conf.df <- as.data.frame(matrix(0, nrow = 3, ncol = 3))
+colnames(conf.df) <- c("True Good Air","True Bad Air","Total")
+rownames(conf.df) <- c("Pred. Good Air ","Pred. Bad Air", "Total")
+
+#Filling the dataframe with confusion matrix's values
+conf.df[1:2,1:2] <- conf.matrix_ridge
+conf.df[,"Total"] <- rowSums(conf.df)
+conf.df["Total",] <- colSums(conf.df)
+
+#Confusion matrix: table
+kable(conf.df, format = "latex", booktabs = TRUE,
+caption = "Confusion Matrix of Ridge Regression on the undersampled dataset") %>%
+  kable_styling(latex_options = "hold_position") %>% 
+  column_spec(c(1,3), border_right = TRUE)
+
+
+#Accuracy
+acc_ridge <- mean(pred.ridge==y.test)
+cat("Accuracy: ", acc_ridge, "\n")
+
+#Precision 
+prec_ridge <- conf.matrix_ridge[2,2]/sum(conf.matrix_ridge[2,])
+cat("Precision: ", prec_ridge, "\n")
+
+#Recall
+recall_ridge <- conf.matrix_ridge[2,2]/sum(conf.matrix_ridge[,2])
+cat("Recall: ", recall_ridge, "\n")
+
+#F1-Score
+F1_score_ridge <- 2*(prec_ridge*recall_ridge)/(prec_ridge + recall_ridge)
+cat("F1-score: ", F1_score_ridge, "\n")
+```
+
+```{r include=FALSE}
+#Ridge model
+ridge.mod <- glmnet(x_train, as.numeric(y.train),alpha=0)
+#Plot of the coefficients for different values of log(lambda)
+colors <- rainbow(dim(x_train)[2])
+n_var <- rownames(coef(ridge.mod))[-1]
+plot(ridge.mod, xvar = "lambda", col = colors, lwd=2)
+
+#Legend for the slides
+variables <- rownames(coef(ridge.mod))[-1]
+colors <- rainbow(length(variables))
+legend_data <- data.frame(variable = factor(variables, levels = variables), 
+                          color = colors)
+p <- ggplot() + theme_void()
+p <- p + geom_point(data = legend_data, aes(x = 1, y = variable, color = variable))+ scale_color_manual(values = colors) +
+  theme(legend.position = "right") +
+  guides(color = guide_legend(title = "Legend"))
+print(p)
+
+
+#Lasso model
+lasso.mod <- glmnet(x_train, as.numeric(y.train),alpha=1)
+#Plot of the coefficients for different values of log(lambda)
+plot(lasso.mod, xvar = "lambda", col = colors, lwd=2)
+```
+
+
+### 4.6.2 Lasso Regression
+Lasso Regression incorporates an L1 penalty into the model, logistic regression in the present context. This approach significantly influences the model's coefficients: the L1 penalty has the effect of pushing the coefficients of the least relevant covariates exactly equal to zero, effectively performing variable selection. 
+
+```{r Lasso regression }
+#Lasso regression: cross validation to select the best lambda based on 
+#the classification error
+set.seed(123)
+cvfit.lasso <- cv.glmnet(x_train, y.train, alpha=1,family="binomial", 
+                         type.measure="class",
+                         set.seed=123)
+plot(cvfit.lasso)
+
+#Best lambda
+best_lambda <- cvfit.lasso$lambda.min
+best_lambda
+
+#Coefficients different from zero
+coefs <- coef(cvfit.lasso, s=cvfit.lasso$lambda.min)
+coefs
+
+```
+
+The variables selected from retention by the Lasso are the same as the ones kept by the backward stepwise selection, with the difference that, unlike the stepwise process, Lasso keeps some dummy variable related to *Month*, specifically *Month4*, *Month9* and *Month11*.
+
+```{r Lasso Regression: predictions}
+#Predictions
+pred.lasso <- predict(cvfit.lasso, x_test, type="class", s=best_lambda)
+
+#Confusion matrix 
+conf.matrix_lasso <- table(pred.lasso, y.test)
+
+#Dataframe of the confusion matrix for visualization
+conf.df <- as.data.frame(matrix(0, nrow = 3, ncol = 3))
+colnames(conf.df) <- c("True Good Air","True Bad Air","Total")
+rownames(conf.df) <- c("Pred. Good Air ","Pred. Bad Air", "Total")
+
+#Filling the dataframe with confusion matrix's values
+conf.df[1:2,1:2] <- conf.matrix_ridge
+conf.df[,"Total"] <- rowSums(conf.df)
+conf.df["Total",] <- colSums(conf.df)
+
+#Confusion matrix: table
+kable(conf.df, format = "latex", booktabs = TRUE,
+caption = "Confusion Matrix of Lasso Regression on the undersampled dataset") %>%
+  kable_styling(latex_options = "hold_position") %>% 
+  column_spec(c(1,3), border_right = TRUE)
+
+
+#Accuracy
+acc_lasso <- mean(pred.lasso==y.test)
+cat("Accuracy: ", acc_lasso, "\n")
+
+#Precision 
+prec_lasso <- conf.matrix_lasso[2,2]/sum(conf.matrix_lasso[2,])
+cat("Precision: ", prec_lasso, "\n")
+
+#Recall
+recall_lasso <- conf.matrix_lasso[2,2]/sum(conf.matrix_lasso[,2])
+cat("Recall: ", recall_lasso, "\n")
+
+#F1-Score
+F1_score_lasso <- 2*(prec_lasso*recall_lasso)/(prec_lasso + recall_lasso)
+cat("F1-score: ", F1_score_lasso, "\n")
+```
+At the initial step of the analysis, to solve collinearity issues, the predictors were chosen based on their correlation with the response variable within the entire training set. Although this procedure could have resulted in too optimistic cross-validation errors, the observed errors are actually good estimates of the true errors computed on the test set, suggesting that the initial concern may be passed over for a simpler implementation approach. 
+The results obtained by the Ridge and Lasso regressions are quite similar in terms of all metrics: Ridge performs well because it keeps all the variables but with smaller-sized coefficients, while Lasso effectively ignores the less important variables, such as *Humidity*, *Year* and almost all the *Month* dummy variables, leading to a simpler model less prone to overfit the data.
+
+## 4.7 K-Nearest Neighbors (KNN)
+K-Nearest Neighbors (KNN) is a non-parametric algorithm widely used for classification tasks. It is based on the idea that similar data points tend to belong to the same category, thus an unlabeled example is classified by assigning it to the most common class among its k nearest neighbors. These neighbors are the k closest data points in the feature space, where the distance between points determines their closeness. Since the dataset contain both numerical and categorical features, it is not appropriate to use traditional distance metrics such as Euclidean distance. For this reason, a distance that can handle both numerical and categorical features has been chosen, that is Gower distance. The Gower distance between two data points X and Y with n features is computed as follows: 
+```{=tex}
+\begin{center}
+
+$\text{Gower}(X, Y) = \frac{\sum_{i=1}^{n} w_i \cdot d(x_i, y_i)}{\sum_{i=1}^{n} w_i}$ 
+
+\end{center}
+```
+
+where $d(x_i,y_i)$ is the normalized distance between the two points for each attribute and $w_i$ is the weight given to each attribute, which can be useful if some variables are considered more important than others.
+For numeric variables, Gower distance uses a normalized version of the L1-norm to ensure that attributes with a large range does not dominate the distance calculation. 
+For categorical covariates, it uses a simple matching coefficient (0/1): if two observations have the same level, the distance for that variable is 0, otherwise 1.
+K-Nearest Neighbors with Gower distance is implemented using *dpred* library and *knngow()* function. The number of nearest neighbors that might be optimized by cross-validation is set equal to 3. 
+
+```{r KNN}
+#Features retained by backward stepwise selection
+features_ret <- c("T_max","Pressure","Wind_speed_med","Visibility","Phenomena")
+#Predictions 
+pred.knn <- knngow(train_balanced[,c(features_ret, "BadAirQuality")], 
+                   test_data[,features_ret], k=3)
+#Confusion matrix 
+conf.matrix_knn <- table(pred.knn, y.test)
+
+#Dataframe of the confusion matrix for visualization
+conf.df <- as.data.frame(matrix(0, nrow = 3, ncol = 3))
+colnames(conf.df) <- c("True Good Air","True Bad Air","Total")
+rownames(conf.df) <- c("Pred. Good Air ","Pred. Bad Air", "Total")
+
+#Filling the dataframe with confusion matrix's values
+conf.df[1:2,1:2] <- conf.matrix_knn
+conf.df[,"Total"] <- rowSums(conf.df)
+conf.df["Total",] <- colSums(conf.df)
+
+#Confusion matrix: table
+kable(conf.df, format = "latex", booktabs = TRUE,
+caption = "Confusion Matrix of K-NN on the undersampled dataset") %>% 
+  kable_styling(latex_options = "hold_position") %>% 
+  column_spec(c(1,3), border_right = TRUE)
+
+
+#Accuracy
+acc_knn <- mean(pred.knn==y.test)
+cat("Accuracy: ", acc_knn, "\n")
+
+#Precision 
+prec_knn <- conf.matrix_knn[2,2]/sum(conf.matrix_knn[2,])
+cat("Precision: ", prec_knn, "\n")
+
+#Recall
+recall_knn <- conf.matrix_knn[2,2]/sum(conf.matrix_knn[,2])
+cat("Recall: ", recall_knn, "\n")
+
+#F1-Score
+F1_score_knn <- 2*(prec_knn*recall_knn)/(prec_knn + recall_knn)
+cat("F1-score: ", F1_score_knn, "\n")
+
+```
+
+# 5 Models comparison
+When comparing different models, the ROC curve (Receiver Operating Characteristic) and AUC (Area Under the Curve) are valuable tools for evaluating the performances of the classification models. The ROC curve is a graphical representation that displays the trade-offs between the True Positive Rate (TPR), represented on the y-axis, and the False Positive Rate (FPR), represented on the x-axis, across different thresholds. The AUC is the area under a ROC curve: if it's equal to 0.5, it suggests no discrimination (equivalent to random guessing), while an AUC of 1.0 indicates perfect prediction. Therefore, higher is the AUC value, better is the model's predictive performance.
+
+```{r ROC curves, message=FALSE, warning=FALSE}
+#ROC curves
+roc_lr <- roc(y.test, pred_under)
+roc_lr_int <- roc(y.test,glm.pred.int_u)
+roc_lda <- roc(y.test,post_lda_u[,2])
+roc_qda <- roc(y.test,post_qda_u[,2])
+roc_ridge <- roc(y.test,as.numeric(pred.ridge))
+roc_lasso <- roc(y.test,as.numeric(pred.lasso))
+roc_nb <- roc(y.test, pred_nb[,2])
+roc_knn <- roc(y.test, as.numeric(pred.knn))
+
+#Plot the ROC curves on the same graph
+plot(roc_lr, col = "red", main = "ROC Curves: Balanced Training Set",
+print.auc = FALSE, legacy.axes = TRUE)
+lines(roc_lr_int, col = "orange")
+lines(roc_lda, col = "green")
+lines(roc_qda, col = "blue")
+lines(roc_ridge, col = "yellow")
+lines(roc_lasso, col = "purple")
+lines(roc_nb, col = "pink")
+lines(roc_knn, col="cyan")
+
+#Add a legend 
+legend("bottomright", legend = c("Logistic Regression", 
+                                 "LR with interactions", "LDA", "QDA",
+                                 "Ridge","Lasso","Naive Bayes","KNN"),
+col = c( "red","orange", "green","blue","yellow", "purple", "pink","cyan"),
+lwd = 2, inset = c(0.02, 0.02), cex=0.8)
+
+```
+
+To have a complete overview, let's take a look at a summary table that includes all the models under analysis fitted on the undersampled dataset and the corresponding metrics considered. All the models under examination, with the exception of the Ridge and Lasso regressions, are the ones fitted on the variables selected by the backward stepwise procedure. 
+
+```{r Model comparison}
+#Model comparison on the balanced dataset 
+table_data <- data.frame(
+Model = c("Logistic Regression","Logistic with interactions", "LDA", "QDA",
+          "Ridge","Lasso","Naive Bayes","KNN"),
+Accuracy = round(c(acc_lr_u, acc_int_u, acc_lda_u, acc_qda_u,acc_ridge,acc_lasso,
+                   acc_nb, acc_knn), digits=3),
+Recall = round(c(recall_lr_u, recall_int_u, recall_lda_u, recall_qda_u, 
+                 recall_ridge, recall_lasso, recall_nb, recall_knn), digits=3),
+Precision = round(c(prec_lr_u, prec_int_u, prec_lda_u, prec_qda_u,
+                    prec_ridge,prec_lasso, prec_nb, prec_knn), digits=3),
+F1_score = round(c(F1_score_u, F1_score_int_u, F1_score_lda_u, F1_score_qda_u,
+                    F1_score_ridge,F1_score_lasso, F1_score_nb, F1_score_knn),
+                 digits=3),
+AUC = round(c(roc_lr$auc,roc_lr_int$auc,roc_lda$auc,roc_qda$auc,roc_ridge$auc,
+              roc_lasso$auc,roc_nb$auc,roc_knn$auc),3)
+)
+
+#Comparison table
+kable(table_data, format = "latex", booktabs = T,
+caption = "Model comparison on the Undersampled Train Set") %>%
+kable_styling(latex_options = c("striped", "hold_position"))
+
+```
+
+All the models have achieved good performances which are quite similar. The models that have the best recall are the Logistic Regression with the interaction terms (0.900) and the LDA (0.875) which are also the models with the highest AUC. However, the overall best model which is able to detect effectively days with poor air quality without increasing significantly the number of false positives, thus having a good precision, is the Logistic Regression model with 0.6 as threshold. It reaches the best accuracy (0.862) and the highest F1-score (0.711) among all the models and has a sensitivity of 0.800.
+
+# 6 Conclusions
+Based on the results achieved from the analysis, it seems that meteorological conditions can accurately predict whether the PM10 particulate levels in the air will be high or low in the following day. Some important considerations can be highlighted.
+
+* During warmest months PM10 is not a serious concern.
+* Year, Day_of_week and Humidity do not add any useful information to predict the response but increase the model complexity leading to overfitting. These variables are in fact removed both by the stepwise selection process and by the Lasso regression.
+* Rainy days and specifically storms reduce significantly the dust particles in the air making it more clean and highly decreasing the probability of having poor air quality the next day.
+* The most significant variables to predict air quality are:
+
+  - Phenomena, above rain, also the presence of fog tends to lower the likelihood      of high PM10 values the following day.
+
+  - Visibility, T_max and Wind_speed_med. High values exhibit a negative influence     on this probability.
+
+  - Pressure plays a significant role as well. High pressure systems where vertical     motion of the air is suppressed increases the probability of having poor air       quality the next day. 
